@@ -20,47 +20,52 @@ package software.aws.mcs.auth;
  * #L%
  */
 
-import com.datastax.oss.driver.api.core.CqlSession;
-import com.datastax.oss.driver.api.core.cql.*;
 
-import software.aws.mcs.auth.SigV4AuthProvider;
+
+import com.datastax.driver.core.*;
+import com.datastax.driver.core.policies.DCAwareRoundRobinPolicy;
+import com.datastax.driver.core.policies.TokenAwarePolicy;
+import sun.security.ssl.SSLContextImpl;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import javax.net.ssl.SSLContext;
 
 public class TestSigV4 {
-    static String[] DEFAULT_CONTACT_POINTS = {"127.0.0.1:9042"};
+    static String DEFAULT_CONTACT_POINT = "cassandra.us-east-1.amazonaws.com";
 
     public static void main(String[] args) throws Exception {
-        String[] contactPointsRaw = DEFAULT_CONTACT_POINTS;
 
-        if (args.length == 1) {
-            contactPointsRaw = args[0].split(",");
-        } else if (args.length > 1) {
-            System.out.println("Usage: TestSigV4 [<contact points, comma separated, 'IP:port' format>]");
-            System.exit(-1);
-        }
-
-        ArrayList<InetSocketAddress> contactPoints = new ArrayList<>(contactPointsRaw.length);
-
-        for (int i = 0; i < contactPointsRaw.length; i++) {
-            String[] parts = contactPointsRaw[i].split(":");
-            contactPoints.add(InetSocketAddress.createUnresolved(parts[0], Integer.parseInt(parts[1])));
-        }
-
-        System.out.println("Using endpoints: " + contactPoints);
+        System.out.println("Using endpoints: " + DEFAULT_CONTACT_POINT);
 
         // The CqlSession object is the main entry point of the driver.
         // It holds the known state of the actual Cassandra cluster (notably the Metadata).
         // This class is thread-safe, you should create a single instance (per target Cassandra cluster), and share
         // it throughout your application.
-        try (CqlSession session = CqlSession.builder()
-             .addContactPoints(contactPoints)
-             .withAuthProvider(new SigV4AuthProvider())
-             .withSslContext(SSLContext.getDefault())
-             .withLocalDatacenter("dc1")
-             .build()) {
+
+       // final SSLContext sslContext = SSLContext.getInstance("TLS");
+        //sslContext.init(null, trustManagers, null);
+
+        //final JdkSSLOptions sslOptions = JdkSSLOptions.builder()
+        //        .withSSLContext(sslContext)
+        //        .build();
+
+       // System.setProperty("javax.net.ssl.trustStore", "/Users/mjraney/.cassandra/cassandra_truststore.jks");
+       // System.setProperty("javax.net.ssl.trustStorePassword", "amazon");
+
+        Session session = Cluster.builder()
+                .addContactPoint(DEFAULT_CONTACT_POINT)
+                .withPort(9142)
+             //.addContactPointsWithPorts(contactPoints)
+             .withAuthProvider(new SigV4AuthProvider("us-east-1"))
+
+              //  .withAuthProvider(new PlainTextAuthProvider("alice-at-963740746376" , "fLyWYFlTCD5J2gzGAZ+dzxUw8QaJvSFx50SF9oGidkI="))
+             .withSSL()
+             //.withLoadBalancingPolicy((new TokenAwarePolicy(DCAwareRoundRobinPolicy.builder().withLocalDc("us-east-1").build())))
+             .build().connect();
+
+
+
 
             // We use execute to send a query to Cassandra. This returns a ResultSet, which is essentially a collection
             // of Row objects.
@@ -71,6 +76,6 @@ public class TestSigV4 {
             // Extract the value of the first (and only) column from the row.
             String releaseVersion = row.getString("release_version");
             System.out.printf("Cassandra version is: %s%n", releaseVersion);
-        }
+
     }
 }
