@@ -1,3 +1,18 @@
+# This branch Added support for 3.x version of java driver. 
+
+``` xml
+<dependency>
+    <groupId>software.aws.mcs</groupId>
+    <artifactId>aws-sigv4-auth-cassandra-java-driver-plugin_3</artifactId>
+    <version>4.0.3</version>
+</dependency>
+<dependency>
+    <groupId>com.datastax.cassandra</groupId>
+    <artifactId>cassandra-driver-core</artifactId>
+    <version>3.7.2</version>
+</dependency>
+```
+
 # IMPORTANT: Latest Version
 
 The current version is 4.0.3. Please see the [changelog](./CHANGELOG.md) for details on version history.
